@@ -5,6 +5,7 @@ import urllib.request
 import urllib.error
 import urllib.parse
 import re
+from datetime import datetime, timezone, timedelta
 from flask import Flask, jsonify, request, send_from_directory
 
 app = Flask(__name__, static_folder="public")
@@ -35,6 +36,26 @@ DRAPEAUX = {
     "Georgia":"🇬🇪","Albania":"🇦🇱","Israel":"🇮🇱","Wales":"🏴󠁧󠁢󠁷󠁬󠁳󠁿",
     "Scotland":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","Indonesia":"🇮🇩","New Zealand":"🇳🇿",
 }
+
+def utc_to_montreal(utc_str):
+    """Convertit une date ISO UTC vers l'heure de Montréal (America/Montreal).
+    EDT = UTC-4 (2e dim mars → 1er dim nov)
+    EST = UTC-5 (reste de l'année)
+    La Coupe du Monde 2026 se joue juin-juillet → toujours EDT (UTC-4).
+    """
+    if not utc_str:
+        return "", ""
+    try:
+        # format: 2026-06-11T20:00:00Z  ou  2026-06-11T20:00:00+00:00
+        utc_str_clean = utc_str.replace("Z", "+00:00")
+        dt_utc = datetime.fromisoformat(utc_str_clean)
+        # EDT = UTC-4 (juin-juillet = toujours EDT pour Montréal)
+        montreal_offset = timedelta(hours=-4)
+        dt_mtl = dt_utc + montreal_offset
+        return dt_mtl.strftime("%Y-%m-%d"), dt_mtl.strftime("%H:%M")
+    except Exception:
+        return utc_str[:10], utc_str[11:16]
+
 
 def get_drapeau(nom):
     return DRAPEAUX.get(nom, "🏳️")
@@ -101,6 +122,7 @@ def format_match(m):
     home_score = ft.get("home") if statut in ("live","fini") else None
     away_score = ft.get("away") if statut in ("live","fini") else None
 
+    date_mtl, heure_mtl = utc_to_montreal(dt)
     return {
         "id":      m.get("id"),
         "groupe":  m.get("stage", "") + " — " + (m.get("group") or m.get("matchday","") or ""),
@@ -118,8 +140,8 @@ def format_match(m):
         },
         "stade":  m.get("venue", ""),
         "ville":  "",
-        "date":   dt[:10],
-        "heure":  dt[11:16],
+        "date":   date_mtl,
+        "heure":  heure_mtl + " EDT",
         "status_raw": status,
     }
 
