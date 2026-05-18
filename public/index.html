@@ -1,1 +1,339 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coupe du Monde 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --green:#1a7a4a;--green-dark:#0f4f2e;--green-light:#e4f5ed;
+      --gold:#c9921a;--red:#c0392b;--red-light:#fdf0f0;
+      --blue:#1a5fa8;--blue-light:#e9f1fb;
+      --g100:#f5f5f3;--g200:#e8e8e5;--g400:#9e9e99;--g700:#3d3d3a;--g900:#1a1a18;
+      --r-sm:6px;--r-md:10px;--r-lg:14px;
+    }
+    body{font-family:'Barlow',sans-serif;background:var(--g100);color:var(--g900);min-height:100vh}
+    .wrap{max-width:920px;margin:0 auto;padding:1.5rem 1rem 3rem}
 
+    /* ── Header ── */
+    .header{background:var(--green-dark);border-radius:var(--r-lg);padding:1.25rem 1.5rem;margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .header-left{display:flex;align-items:center;gap:14px}
+    .header-icon{font-size:32px}
+    .header-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:#fff;letter-spacing:.5px;line-height:1.2}
+    .header-sub{font-size:12px;color:rgba(255,255,255,.55);margin-top:2px}
+    .header-badge{background:var(--gold);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:.5px;padding:5px 12px;border-radius:var(--r-sm);white-space:nowrap}
+
+    /* ── Stats ── */
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
+    .stat-card{background:#fff;border-radius:var(--r-md);border:1px solid var(--g200);padding:.875rem 1rem}
+    .stat-label{font-size:11px;color:var(--g400);text-transform:uppercase;letter-spacing:.5px}
+    .stat-value{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:600;color:var(--g900);margin-top:2px}
+    .stat-sub{font-size:11px;color:var(--g400);margin-top:1px}
+    .live-num{color:var(--red)}
+
+    /* ── Tabs ── */
+    .tabs{display:flex;gap:4px;margin-bottom:1.25rem;background:#fff;border:1px solid var(--g200);border-radius:var(--r-md);padding:4px}
+    .tab{flex:1;padding:9px 8px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:600;letter-spacing:.3px;color:var(--g400);cursor:pointer;border:none;background:none;border-radius:var(--r-sm);transition:all .15s}
+    .tab.active{background:var(--green-dark);color:#fff}
+    .tab:hover:not(.active){color:var(--g700);background:var(--g100)}
+    .section{display:none}.section.active{display:block}
+
+    /* ── Day sep ── */
+    .day-sep{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:500;color:var(--g400);text-transform:uppercase;letter-spacing:.6px;margin:14px 0 10px}
+    .day-line{flex:1;height:1px;background:var(--g200)}
+
+    /* ── Match card ── */
+    .match-card{background:#fff;border:1px solid var(--g200);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:10px;transition:border-color .15s,box-shadow .15s}
+    .match-card:hover{border-color:#bbb;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .match-card.live{border-left:3px solid var(--red)}
+    .match-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .match-phase{font-size:11px;font-weight:500;color:var(--g400);text-transform:uppercase;letter-spacing:.5px}
+    .badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:var(--r-sm);letter-spacing:.3px}
+    .badge-live{background:var(--red-light);color:var(--red)}
+    .badge-fini{background:var(--g100);color:var(--g400)}
+    .badge-prevu{background:var(--blue-light);color:var(--blue)}
+    .live-dot{width:7px;height:7px;background:var(--red);border-radius:50%;animation:blink 1.2s infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+    .match-teams{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+    .team{display:flex;align-items:center;gap:8px}
+    .team.away{flex-direction:row-reverse}
+    .flag{font-size:24px}
+    .tname{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:600;color:var(--g900)}
+    .team.away .tname{text-align:right}
+    .score-box{display:flex;align-items:center;gap:6px;justify-content:center}
+    .score{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;color:var(--g900);min-width:26px;text-align:center}
+    .score-sep{font-size:20px;color:var(--g400)}
+    .score-vs{font-family:'Barlow Condensed',sans-serif;font-size:15px;color:var(--g400);font-weight:600}
+    .venue{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--g400);margin-top:10px}
+
+    /* ── Groupes ── */
+    .groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+    .group-card{background:#fff;border:1px solid var(--g200);border-radius:var(--r-lg);padding:.875rem 1rem}
+    .group-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--green);margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--g200)}
+    .gteam{display:flex;align-items:center;gap:7px;padding:4px 0;font-size:13px;color:var(--g900);border-bottom:1px solid var(--g100)}
+    .gteam:last-child{border-bottom:none}
+    .gflag{font-size:15px}
+    .gpts{margin-left:auto;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;color:var(--g700);min-width:30px;text-align:right}
+    .gpts.leader{color:var(--green)}
+
+    /* ── Loader / Erreur ── */
+    .loader{text-align:center;padding:2.5rem;color:var(--g400);font-size:14px}
+    .spin{display:inline-block;width:18px;height:18px;border:2px solid var(--g200);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .err-box{background:var(--red-light);border:1px solid #f5c6c6;border-radius:var(--r-md);padding:1rem 1.25rem;color:var(--red);font-size:14px;margin-bottom:1rem}
+    .err-box strong{display:block;margin-bottom:4px}
+    .empty{text-align:center;padding:2rem;color:var(--g400);font-size:14px}
+
+    /* ── IA ── */
+    .ai-panel{background:#fff;border:1px solid var(--g200);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-top:1.25rem}
+    .ai-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:600;color:var(--g700)}
+    .ai-btns{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+    .ai-btn{font-size:13px;color:var(--g700);background:var(--g100);border:1px solid var(--g200);border-radius:var(--r-sm);padding:6px 12px;cursor:pointer;transition:background .15s}
+    .ai-btn:hover{background:var(--green-light);border-color:var(--green);color:var(--green-dark)}
+    .ai-row{display:flex;gap:8px}
+    .ai-input{flex:1;padding:9px 12px;border:1px solid var(--g200);border-radius:var(--r-sm);font-family:'Barlow',sans-serif;font-size:13px;color:var(--g900);background:var(--g100);outline:none;transition:border-color .15s}
+    .ai-input:focus{border-color:var(--green);background:#fff}
+    .ai-send{background:var(--green-dark);color:#fff;border:none;border-radius:var(--r-sm);padding:9px 16px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap}
+    .ai-send:hover{background:var(--green)}
+    .ai-send:disabled{opacity:.5;cursor:not-allowed}
+    .ai-resp{margin-top:12px;padding:12px;background:var(--green-light);border-radius:var(--r-sm);font-size:14px;line-height:1.6;color:var(--green-dark);display:none}
+    .ai-resp.on{display:block}
+    .ai-resp.err{background:var(--red-light);color:var(--red)}
+
+    @media(max-width:600px){
+      .stats-row{grid-template-columns:repeat(2,1fr)}
+      .tname{font-size:14px}
+      .header-badge{display:none}
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="header-left">
+      <span class="header-icon">🏆</span>
+      <div>
+        <div class="header-title">Coupe du Monde FIFA 2026</div>
+        <div class="header-sub">États-Unis · Canada · Mexique &nbsp;|&nbsp; 11 juin – 19 juillet 2026</div>
+      </div>
+    </div>
+    <span class="header-badge">Phase de groupes</span>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-label">Matchs joués</div><div class="stat-value" id="s-joues">—</div><div class="stat-sub">sur 104</div></div>
+    <div class="stat-card"><div class="stat-label">Buts marqués</div><div class="stat-value" id="s-buts">—</div><div class="stat-sub" id="s-moy">— / match</div></div>
+    <div class="stat-card"><div class="stat-label">Équipes</div><div class="stat-value">48</div><div class="stat-sub">16 groupes</div></div>
+    <div class="stat-card"><div class="stat-label">En direct</div><div class="stat-value live-num" id="s-live">—</div><div class="stat-sub">matchs live</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('resultats',this)">⚽ Résultats</button>
+    <button class="tab" onclick="showTab('groupes-sec',this)">📊 Groupes</button>
+  </div>
+
+  <div id="resultats" class="section active">
+    <div id="matches-ctr"><div class="loader"><span class="spin"></span>Chargement des matchs…</div></div>
+  </div>
+
+  <div id="groupes-sec" class="section">
+    <div id="groupes-ctr"><div class="loader"><span class="spin"></span>Chargement des groupes…</div></div>
+  </div>
+
+  <div class="ai-panel">
+    <div class="ai-header">✨ Analyser avec Gemini</div>
+    <div class="ai-btns">
+      <button class="ai-btn" onclick="ask('Qui sont les favoris du tournoi et pourquoi ?')">🏅 Favoris</button>
+      <button class="ai-btn" onclick="ask('Quelles sont les surprises et déceptions des matchs joués ?')">😮 Surprises</button>
+      <button class="ai-btn" onclick="ask('Quelles équipes africaines ont des chances de passer en huitièmes ?')">🌍 Afrique</button>
+      <button class="ai-btn" onclick="ask('Fais un résumé complet de tous les matchs terminés')">📋 Résumé</button>
+      <button class="ai-btn" onclick="ask('Quel est le prochain match le plus attendu ?')">🔜 Prochain choc</button>
+    </div>
+    <div class="ai-row">
+      <input class="ai-input" id="ai-inp" type="text" placeholder="Pose ta question sur la Coupe du Monde…" onkeydown="if(event.key==='Enter')ask()"/>
+      <button class="ai-send" id="ai-btn" onclick="ask()">Envoyer</button>
+    </div>
+    <div class="ai-resp" id="ai-resp"></div>
+  </div>
+
+</div>
+<script>
+// ─── Navigation ───────────────────────────────────────────────────────────────
+function showTab(id, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+}
+
+// ─── Utilitaires ─────────────────────────────────────────────────────────────
+const MONTHS = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const [, mo, d] = iso.split('-');
+  return `${parseInt(d)} ${MONTHS[parseInt(mo)-1]}`;
+}
+
+function fmtRound(r) {
+  return (r || '')
+    .replace('Group Stage - ', 'Journée ')
+    .replace('Round of 16', 'Huitièmes')
+    .replace('Quarter-finals', 'Quarts de finale')
+    .replace('Semi-finals', 'Demi-finales')
+    .replace('3rd Place Final', '3ᵉ place')
+    .replace(/^Final$/, 'Finale');
+}
+
+function errBox(msg) {
+  return `<div class="err-box"><strong>⚠️ Erreur</strong>${msg}<br><small>Vérifiez que RAPIDAPI_KEY est bien configurée dans vos variables d'environnement.</small></div>`;
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const r = await fetch('/api/stats');
+    const d = await r.json();
+    if (d.error) return;
+    document.getElementById('s-joues').textContent = d.joues;
+    document.getElementById('s-buts').textContent  = d.buts;
+    document.getElementById('s-live').textContent  = d.live;
+    document.getElementById('s-moy').textContent   = (d.joues > 0 ? d.moy : '—') + ' / match';
+  } catch(e) { /* silencieux */ }
+}
+
+// ─── Matchs ───────────────────────────────────────────────────────────────────
+function badge(m) {
+  if (m.statut === 'live') {
+    const min = m.minute ? `${m.minute}'` : 'LIVE';
+    return `<span class="badge badge-live"><span class="live-dot"></span>${min}</span>`;
+  }
+  if (m.statut === 'fini') return `<span class="badge badge-fini">Terminé</span>`;
+  const info = [fmtDate(m.date), m.heure].filter(Boolean).join(' · ');
+  return `<span class="badge badge-prevu">${info || 'À venir'}</span>`;
+}
+
+function renderMatches(list) {
+  if (!list.length) {
+    document.getElementById('matches-ctr').innerHTML = '<div class="empty">Aucun match disponible pour le moment.</div>';
+    return;
+  }
+  const groups = { live: [], fini: [], prevu: [] };
+  list.forEach(m => { (groups[m.statut] || groups.prevu).push(m); });
+
+  const labels = { live:'🔴 En direct', fini:'✅ Terminés', prevu:'🕒 À venir' };
+  let html = '';
+  ['live','fini','prevu'].forEach(k => {
+    if (!groups[k].length) return;
+    html += `<div class="day-sep"><div class="day-line"></div><span>${labels[k]}</span><div class="day-line"></div></div>`;
+    groups[k].forEach(m => {
+      const hasScore = m.domicile.score !== null && m.domicile.score !== undefined;
+      const sc = hasScore
+        ? `<span class="score">${m.domicile.score}</span><span class="score-sep">–</span><span class="score">${m.exterieur.score}</span>`
+        : `<span class="score-vs">vs</span>`;
+      const loc = [m.stade, m.ville].filter(Boolean).join(', ');
+      html += `
+        <div class="match-card${m.statut==='live'?' live':''}">
+          <div class="match-meta">
+            <span class="match-phase">${fmtRound(m.groupe)}</span>
+            ${badge(m)}
+          </div>
+          <div class="match-teams">
+            <div class="team"><span class="flag">${m.domicile.drapeau}</span><span class="tname">${m.domicile.nom}</span></div>
+            <div class="score-box">${sc}</div>
+            <div class="team away"><span class="flag">${m.exterieur.drapeau}</span><span class="tname">${m.exterieur.nom}</span></div>
+          </div>
+          ${loc ? `<div class="venue">📍 ${loc}</div>` : ''}
+        </div>`;
+    });
+  });
+  document.getElementById('matches-ctr').innerHTML = html;
+}
+
+async function loadMatches() {
+  try {
+    const r = await fetch('/api/matches');
+    const d = await r.json();
+    if (d.error) { document.getElementById('matches-ctr').innerHTML = errBox(d.error); return; }
+    renderMatches(Array.isArray(d) ? d : []);
+  } catch(e) {
+    document.getElementById('matches-ctr').innerHTML = errBox(e.message);
+  }
+}
+
+// ─── Groupes ──────────────────────────────────────────────────────────────────
+function renderGroupes(list) {
+  if (!list.length) {
+    document.getElementById('groupes-ctr').innerHTML =
+      '<div class="empty">Classements pas encore disponibles — le tournoi démarre le 11 juin 2026.</div>';
+    return;
+  }
+  const html = list.map(g => {
+    const sorted = [...g.equipes].sort((a,b) => b.pts-a.pts || (b.bp-b.bc)-(a.bp-a.bc));
+    const rows = sorted.map((e,i) => `
+      <div class="gteam">
+        <span class="gflag">${e.drapeau}</span>
+        <span>${e.nom}</span>
+        <span class="gpts${i<2&&e.pts>0?' leader':''}">${e.pts} pts</span>
+      </div>`).join('');
+    return `<div class="group-card"><div class="group-label">Groupe ${g.lettre}</div>${rows}</div>`;
+  }).join('');
+  document.getElementById('groupes-ctr').innerHTML = `<div class="groups-grid">${html}</div>`;
+}
+
+async function loadGroupes() {
+  try {
+    const r = await fetch('/api/groupes');
+    const d = await r.json();
+    if (d.error) { document.getElementById('groupes-ctr').innerHTML = errBox(d.error); return; }
+    renderGroupes(Array.isArray(d) ? d : []);
+  } catch(e) {
+    document.getElementById('groupes-ctr').innerHTML = errBox(e.message);
+  }
+}
+
+// ─── IA Gemini ────────────────────────────────────────────────────────────────
+async function ask(prompt) {
+  const inp  = document.getElementById('ai-inp');
+  const btn  = document.getElementById('ai-btn');
+  const resp = document.getElementById('ai-resp');
+  const msg  = prompt || inp.value.trim();
+  if (!msg) { inp.focus(); return; }
+
+  inp.value    = '';
+  btn.disabled = true;
+  resp.className = 'ai-resp on';
+  resp.textContent = '⏳ Analyse en cours…';
+
+  try {
+    const r = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({message: msg})
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    resp.className   = 'ai-resp on';
+    resp.textContent = '✨ ' + d.reponse;
+  } catch(e) {
+    resp.className   = 'ai-resp on err';
+    resp.textContent = '⚠️ ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ─── Init & rafraîchissement auto ─────────────────────────────────────────────
+loadStats();
+loadMatches();
+loadGroupes();
+setInterval(loadMatches, 60000);   // toutes les 60s
+setInterval(loadStats,   60000);
+setInterval(loadGroupes, 300000);  // toutes les 5 min
+</script>
+</body>
+</html>
