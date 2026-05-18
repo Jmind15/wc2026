@@ -3,6 +3,8 @@ import json
 import time
 import urllib.request
 import urllib.error
+import urllib.parse
+import re
 from flask import Flask, jsonify, request, send_from_directory
 
 app = Flask(__name__, static_folder="public")
@@ -201,11 +203,56 @@ def api_stats():
     return jsonify(result)
 
 
+# ─── Actualités via Google News RSS (sans clé) ───────────────────────────────
+def fetch_news(query, max_items=6):
+    cached = cache_get(f"news:{query}")
+    if cached is not None:
+        return cached
+    q = urllib.parse.quote(query + " coupe du monde 2026")
+    url = f"https://news.google.com/rss/search?q={q}&hl=fr&gl=FR&ceid=FR:fr"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            xml = resp.read().decode("utf-8")
+    except Exception:
+        return []
+    items = []
+    for item in re.findall(r"<item>(.*?)</item>", xml, re.DOTALL)[:max_items]:
+        title   = re.search(r"<title>(.*?)</title>", item)
+        source  = re.search(r"<source[^>]*>(.*?)</source>", item)
+        pubdate = re.search(r"<pubDate>(.*?)</pubDate>", item)
+        if not title:
+            continue
+        titre = re.sub(r"<[^>]+>", "", title.group(1))
+        titre = re.sub(r"\s*-\s*[^-]+$", "", titre).strip()
+        src   = re.sub(r"<[^>]+>", "", source.group(1)) if source else ""
+        age   = ""
+        if pubdate:
+            try:
+                from email.utils import parsedate_to_datetime
+                dt  = parsedate_to_datetime(pubdate.group(1))
+                diff = int(time.time() - dt.timestamp())
+                if diff < 3600:   age = f"il y a {diff // 60} min"
+                elif diff < 86400: age = f"il y a {diff // 3600}h"
+                else:              age = f"il y a {diff // 86400}j"
+            except Exception:
+                pass
+        if titre:
+            items.append({"titre": titre, "source": src, "age": age})
+    cache_set(f"news:{query}", items, ttl=600)
+    return items
+
+
+@app.route("/api/news")
+def api_news():
+    q = request.args.get("q", "coupe du monde 2026")
+    return jsonify(fetch_news(q))
+
+
 @app.route("/api/gemini", methods=["POST"])
 def api_gemini():
     if not GEMINI_API_KEY:
         return jsonify({"error": "Clé API Gemini manquante."}), 500
-
     body    = request.get_json() or {}
     message = body.get("message", "").strip()
     if not message:
@@ -213,32 +260,36 @@ def api_gemini():
 
     matches_ctx = cache_get("matches") or []
     groupes_ctx = cache_get("groupes") or []
+    news_ctx    = fetch_news(message[:80])
 
     system_prompt = f"""Tu es un expert en football et analyste sportif pour la Coupe du Monde 2026.
-Voici les données en temps réel :
 
-MATCHS :
-{json.dumps(matches_ctx[:20], ensure_ascii=False, indent=2)}
+DONNÉES EN TEMPS RÉEL — MATCHS :
+{json.dumps(matches_ctx[:20], ensure_ascii=False)}
 
-CLASSEMENTS :
-{json.dumps(groupes_ctx, ensure_ascii=False, indent=2)}
+CLASSEMENTS DES GROUPES :
+{json.dumps(groupes_ctx, ensure_ascii=False)}
 
-Réponds en français, de manière concise et enthousiaste. Maximum 200 mots."""
+ACTUALITÉS RÉCENTES (Google News) :
+{json.dumps(news_ctx, ensure_ascii=False)}
+
+Réponds en français. Sois précis, complet et enthousiaste.
+Si les actualités contiennent des infos pertinentes, mentionne-les.
+Développe ta réponse en 3 à 5 phrases bien construites."""
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={GEMINI_API_KEY}"
     payload = json.dumps({
         "systemInstruction": {"parts": [{"text": system_prompt}]},
         "contents": [{"role": "user", "parts": [{"text": message}]}],
-        "generationConfig": {"maxOutputTokens": 500, "temperature": 0.7}
+        "generationConfig": {"maxOutputTokens": 1024, "temperature": 0.7}
     }).encode("utf-8")
-
     req = urllib.request.Request(url, data=payload,
                                   headers={"Content-Type": "application/json"}, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=20) as resp:
             result = json.loads(resp.read().decode("utf-8"))
         text = result["candidates"][0]["content"]["parts"][0]["text"]
-        return jsonify({"reponse": text})
+        return jsonify({"reponse": text, "news": news_ctx})
     except urllib.error.HTTPError as e:
         err_body = json.loads(e.read().decode())
         return jsonify({"error": err_body.get("error", {}).get("message", "Erreur Gemini")}), 500
