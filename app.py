@@ -359,7 +359,7 @@ def ask_gemini(message, matches_ctx, groupes_ctx, news_ctx):
         payload = json.dumps({
             "system_instruction": {"parts": [{"text": system_prompt}]},
             "contents": [{"role": "user", "parts": [{"text": message}]}],
-            "generationConfig": {"maxOutputTokens": 1024, "temperature": 0.7}
+            "generationConfig": {"maxOutputTokens": 8192, "temperature": 0.2}
         }).encode("utf-8")
         req = urllib.request.Request(url, data=payload, method="POST")
         req.add_header("Content-Type", "application/json")
