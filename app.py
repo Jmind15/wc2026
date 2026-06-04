@@ -299,7 +299,7 @@ Réponds en français. Sois précis, complet et enthousiaste.
 Si les actualités contiennent des infos pertinentes, mentionne-les.
 Développe ta réponse en 3 à 5 phrases bien construites."""
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={GEMINI_API_KEY}"
     payload = json.dumps({
         "systemInstruction": {"parts": [{"text": system_prompt}]},
         "contents": [{"role": "user", "parts": [{"text": message}]}],
