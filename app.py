@@ -305,8 +305,10 @@ Développe ta réponse en 3 à 5 phrases bien construites."""
         "contents": [{"role": "user", "parts": [{"text": message}]}],
         "generationConfig": {"maxOutputTokens": 1024, "temperature": 0.7}
     }).encode("utf-8")
-    req = urllib.request.Request(url, data=payload,
-                                  headers={"Content-Type": "application/json"}, method="POST")
+    req = urllib.request.Request(url, data=payload, method="POST")
+    req.add_header("Content-Type", "application/json")
+    req.add_header("x-goog-api-client", "genai-python/0.1.0")
+    
     try:
         with urllib.request.urlopen(req, timeout=20) as resp:
             result = json.loads(resp.read().decode("utf-8"))
