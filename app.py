@@ -6,6 +6,8 @@ import urllib.error
 import urllib.parse
 import re
 from datetime import datetime, timezone, timedelta
+from google import genai
+from google.genai import types
 from flask import Flask, jsonify, request, send_from_directory
 
 app = Flask(__name__, static_folder="public")
@@ -284,42 +286,39 @@ def api_gemini():
     groupes_ctx = cache_get("groupes") or []
     news_ctx    = fetch_news(message[:80])
 
-    system_prompt = f"""Tu es un expert en football et analyste sportif pour la Coupe du Monde 2026.
+    system_prompt = (
+        "Tu es un expert en football et analyste sportif pour la Coupe du Monde 2026.\n\n"
+        "DONNÉES EN TEMPS RÉEL — MATCHS :\n"
+        + json.dumps(matches_ctx[:20], ensure_ascii=False) + "\n\n"
+        "CLASSEMENTS DES GROUPES :\n"
+        + json.dumps(groupes_ctx, ensure_ascii=False) + "\n\n"
+        "ACTUALITÉS RÉCENTES (Google News) :\n"
+        + json.dumps(news_ctx, ensure_ascii=False) + "\n\n"
+        "Réponds en français. Sois précis et enthousiaste. "
+        "Développe en 3 à 5 phrases. Mentionne les actualités si pertinentes."
+    )
 
-DONNÉES EN TEMPS RÉEL — MATCHS :
-{json.dumps(matches_ctx[:20], ensure_ascii=False)}
+    # Utiliser le SDK officiel google-genai qui gère le routage geo automatiquement
+    MODELS_TO_TRY = ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.1-pro-preview"]
+    last_err = ""
+    for model_name in MODELS_TO_TRY:
+        try:
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            response = client.models.generate_content(
+                model=model_name,
+                contents=message,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    max_output_tokens=1024,
+                    temperature=0.7,
+                )
+            )
+            return jsonify({"reponse": response.text, "news": news_ctx, "model": model_name})
+        except Exception as e:
+            last_err = str(e)
+            continue
 
-CLASSEMENTS DES GROUPES :
-{json.dumps(groupes_ctx, ensure_ascii=False)}
-
-ACTUALITÉS RÉCENTES (Google News) :
-{json.dumps(news_ctx, ensure_ascii=False)}
-
-Réponds en français. Sois précis, complet et enthousiaste.
-Si les actualités contiennent des infos pertinentes, mentionne-les.
-Développe ta réponse en 3 à 5 phrases bien construites."""
-
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={GEMINI_API_KEY}"
-    payload = json.dumps({
-        "systemInstruction": {"parts": [{"text": system_prompt}]},
-        "contents": [{"role": "user", "parts": [{"text": message}]}],
-        "generationConfig": {"maxOutputTokens": 1024, "temperature": 0.7}
-    }).encode("utf-8")
-    req = urllib.request.Request(url, data=payload, method="POST")
-    req.add_header("Content-Type", "application/json")
-    req.add_header("x-goog-api-client", "genai-python/0.1.0")
-    
-    try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            result = json.loads(resp.read().decode("utf-8"))
-        text = result["candidates"][0]["content"]["parts"][0]["text"]
-        return jsonify({"reponse": text, "news": news_ctx})
-    except urllib.error.HTTPError as e:
-        err_body = json.loads(e.read().decode())
-        return jsonify({"error": err_body.get("error", {}).get("message", "Erreur Gemini")}), 500
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+    return jsonify({"error": f"Tous les modèles Gemini ont échoué : {last_err}"}), 500
 
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
@@ -336,6 +335,9 @@ if __name__ == "__main__":
     print(f"    → http://localhost:{port}\n")
     if not FOOTBALLDATA_KEY:
         print("    ⚠️  FOOTBALLDATA_KEY non configurée\n")
+    if not GEMINI_API_KEY:
+        print("    ⚠️  GEMINI_API_KEY non configurée\n")
+    app.run(host="0.0.0.0", port=port, debug=debug)
     if not GEMINI_API_KEY:
         print("    ⚠️  GEMINI_API_KEY non configurée\n")
     app.run(host="0.0.0.0", port=port, debug=debug)
