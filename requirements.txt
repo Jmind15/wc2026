@@ -1,2 +1,1 @@
 flask==3.0.3
-google-genai==2.8.0
