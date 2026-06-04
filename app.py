@@ -6,8 +6,6 @@ import urllib.error
 import urllib.parse
 import re
 from datetime import datetime, timezone, timedelta
-from google import genai
-from google.genai import types
 from flask import Flask, jsonify, request, send_from_directory
 
 app = Flask(__name__, static_folder="public")
@@ -298,27 +296,43 @@ def api_gemini():
         "Développe en 3 à 5 phrases. Mentionne les actualités si pertinentes."
     )
 
-    # Utiliser le SDK officiel google-genai qui gère le routage geo automatiquement
-    MODELS_TO_TRY = ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.1-pro-preview"]
+    # Appel direct sans SDK — fonctionne depuis n'importe quel serveur
+    MODELS = ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash"]
     last_err = ""
-    for model_name in MODELS_TO_TRY:
+
+    for model in MODELS:
+        url = (
+            f"https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{model}:generateContent?key={GEMINI_API_KEY}"
+        )
+        payload = json.dumps({
+            "system_instruction": {"parts": [{"text": system_prompt}]},
+            "contents": [{"role": "user", "parts": [{"text": message}]}],
+            "generationConfig": {"maxOutputTokens": 1024, "temperature": 0.7}
+        }).encode("utf-8")
+
+        req = urllib.request.Request(url, data=payload, method="POST")
+        req.add_header("Content-Type", "application/json")
+        # Ce header indique à Google qu'on est un client légitime
+        req.add_header("x-goog-api-key", GEMINI_API_KEY)
+
         try:
-            client = genai.Client(api_key=GEMINI_API_KEY)
-            response = client.models.generate_content(
-                model=model_name,
-                contents=message,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    max_output_tokens=1024,
-                    temperature=0.7,
-                )
-            )
-            return jsonify({"reponse": response.text, "news": news_ctx, "model": model_name})
+            with urllib.request.urlopen(req, timeout=25) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+            text = result["candidates"][0]["content"]["parts"][0]["text"]
+            return jsonify({"reponse": text, "news": news_ctx, "model": model})
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode()
+            try:
+                last_err = json.loads(err_body).get("error", {}).get("message", f"HTTP {e.code}")
+            except Exception:
+                last_err = f"HTTP {e.code}"
+            continue
         except Exception as e:
             last_err = str(e)
             continue
 
-    return jsonify({"error": f"Tous les modèles Gemini ont échoué : {last_err}"}), 500
+    return jsonify({"error": last_err}), 500
 
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
@@ -335,9 +349,6 @@ if __name__ == "__main__":
     print(f"    → http://localhost:{port}\n")
     if not FOOTBALLDATA_KEY:
         print("    ⚠️  FOOTBALLDATA_KEY non configurée\n")
-    if not GEMINI_API_KEY:
-        print("    ⚠️  GEMINI_API_KEY non configurée\n")
-    app.run(host="0.0.0.0", port=port, debug=debug)
     if not GEMINI_API_KEY:
         print("    ⚠️  GEMINI_API_KEY non configurée\n")
     app.run(host="0.0.0.0", port=port, debug=debug)
