@@ -274,10 +274,16 @@ def fetch_news(query):
         title   = re.search(r"<title>(.*?)</title>", item)
         source  = re.search(r"<source[^>]*>(.*?)</source>", item)
         pubdate = re.search(r"<pubDate>(.*?)</pubDate>", item)
+        # Google News encode le vrai lien dans <link> après </guid>
+        link_m  = re.search(r"<link>(.*?)</link>", item) or re.search(r"<guid[^>]*>(.*?)</guid>", item)
         if not title: continue
         titre = re.sub(r"<[^>]+>", "", title.group(1))
         titre = re.sub(r"\s*-\s*[^-]+$", "", titre).strip()
         src   = re.sub(r"<[^>]+>", "", source.group(1)) if source else ""
+        lien  = link_m.group(1).strip() if link_m else ""
+        # Décoder l'URL Google News si nécessaire
+        if lien and "news.google.com" in lien and "/articles/" in lien:
+            lien = lien  # lien direct Google News — fonctionne en redirection
         age   = ""
         if pubdate:
             try:
@@ -288,7 +294,7 @@ def fetch_news(query):
                 else:              age = f"il y a {diff//86400}j"
             except: pass
         if titre:
-            items.append({"titre": titre, "source": src, "age": age})
+            items.append({"titre": titre, "source": src, "age": age, "lien": lien})
     return items
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -359,7 +365,7 @@ def ask_gemini(message, matches_ctx, groupes_ctx, news_ctx):
         payload = json.dumps({
             "system_instruction": {"parts": [{"text": system_prompt}]},
             "contents": [{"role": "user", "parts": [{"text": message}]}],
-            "generationConfig": {"maxOutputTokens": 8192, "temperature": 0.2}
+            "generationConfig": {"maxOutputTokens": 1024, "temperature": 0.7}
         }).encode("utf-8")
         req = urllib.request.Request(url, data=payload, method="POST")
         req.add_header("Content-Type", "application/json")
@@ -532,12 +538,19 @@ with tab3:
         st.info("Aucune actualité trouvée. Essayez un autre terme.")
     else:
         for n in news:
+            lien  = n.get("lien", "")
+            titre_html = (
+                f'<a href="{lien}" target="_blank" rel="noopener" '
+                f'style="color:#1a1a18;text-decoration:none;font-weight:500">'
+                f'{n["titre"]} <span style="color:#1a7a4a;font-size:12px">↗</span></a>'
+            ) if lien else f'<span style="font-weight:500">{n["titre"]}</span>'
+
             st.markdown(f"""<div class="news-card">
                 <div style="display:flex;gap:12px;align-items:flex-start">
                   <span style="font-size:24px;flex-shrink:0">{eflag}</span>
-                  <div>
+                  <div style="flex:1;min-width:0">
                     <div class="news-source">{n["source"]}</div>
-                    <div class="news-title">{n["titre"]}</div>
+                    <div class="news-title">{titre_html}</div>
                     <div class="news-age">{n["age"]}</div>
                   </div>
                 </div>
@@ -603,3 +616,4 @@ if live > 0:
     st.caption("🔴 Match en direct — la page se rafraîchit automatiquement toutes les 60s")
     time.sleep(1)
     st.rerun()
+
