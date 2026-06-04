@@ -538,23 +538,21 @@ with tab3:
         st.info("Aucune actualité trouvée. Essayez un autre terme.")
     else:
         for n in news:
-            lien  = n.get("lien", "")
-            titre_html = (
-                f'<a href="{lien}" target="_blank" rel="noopener" '
-                f'style="color:#1a1a18;text-decoration:none;font-weight:500">'
-                f'{n["titre"]} <span style="color:#1a7a4a;font-size:12px">↗</span></a>'
-            ) if lien else f'<span style="font-weight:500">{n["titre"]}</span>'
-
-            st.markdown(f"""<div class="news-card">
-                <div style="display:flex;gap:12px;align-items:flex-start">
-                  <span style="font-size:24px;flex-shrink:0">{eflag}</span>
-                  <div style="flex:1;min-width:0">
-                    <div class="news-source">{n["source"]}</div>
-                    <div class="news-title">{titre_html}</div>
-                    <div class="news-age">{n["age"]}</div>
-                  </div>
-                </div>
-            </div>""", unsafe_allow_html=True)
+            lien = n.get("lien", "")
+            with st.container():
+                st.markdown(f"""<div class="news-card">
+                    <div style="display:flex;gap:6px;align-items:center;margin-bottom:2px">
+                      <span style="font-size:18px">{eflag}</span>
+                      <span class="news-source">{n["source"]}</span>
+                      <span class="news-age" style="margin-left:auto">{n["age"]}</span>
+                    </div>
+                </div>""", unsafe_allow_html=True)
+                # st.markdown natif rend les liens vraiment cliquables
+                if lien:
+                    st.markdown(f"[{n['titre']} ↗]({lien})")
+                else:
+                    st.markdown(n["titre"])
+                st.divider()
 
 # ══ TAB 4 : IA Gemini ════════════════════════════════════════════════════════
 with tab4:
@@ -616,4 +614,5 @@ if live > 0:
     st.caption("🔴 Match en direct — la page se rafraîchit automatiquement toutes les 60s")
     time.sleep(1)
     st.rerun()
+
 
